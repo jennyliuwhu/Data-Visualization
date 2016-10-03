@@ -24,9 +24,9 @@ def load_data(fname):
                                       second for the prediction data.
     """
     conn = sqlite3.connect(fname)
-    vdf = pd.read_sql(sql="SELECT * FROM vehicles WHERE `vid` IS NOT NULL AND `vid` != '' LIMIT 1000", con=conn, parse_dates=['tmstmp'])
+    vdf = pd.read_sql(sql="SELECT * FROM vehicles WHERE `vid` IS NOT NULL AND `vid` != ''", con=conn, parse_dates=['tmstmp'])
     vdf['vid'] = vdf['vid'].astype(int)
-    pdf = pd.read_sql(sql="SELECT * FROM predictions WHERE `vid` IS NOT NULL AND `vid` != '' LIMIT 1000", con=conn, parse_dates=['tmstmp', 'prdtm'])
+    pdf = pd.read_sql(sql="SELECT * FROM predictions WHERE `vid` IS NOT NULL AND `vid` != ''", con=conn, parse_dates=['tmstmp', 'prdtm'])
     f = lambda x: len(str(x)) != 0
     pdf['dly'] = pdf['dly'].map(f)
     return vdf, pdf
