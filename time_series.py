@@ -4,9 +4,9 @@ from collections import deque
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-
-matplotlib.use("svg")
+import datetime
 plt.style.use('ggplot')
+matplotlib.use("svg")
 
 # you should adjust this to fit your screen
 matplotlib.rcParams['figure.figsize'] = (10.0, 5.0)
@@ -24,9 +24,9 @@ def load_data(fname):
                                       second for the prediction data.
     """
     conn = sqlite3.connect(fname)
-    vdf = pd.read_sql(sql="SELECT * FROM vehicles WHERE `vid` IS NOT NULL AND `vid` != ''", con=conn, parse_dates=['tmstmp'])
+    vdf = pd.read_sql(sql="SELECT * FROM vehicles WHERE `vid` IS NOT NULL AND `vid` != '' LIMIT 1000", con=conn, parse_dates=['tmstmp'])
     vdf['vid'] = vdf['vid'].astype(int)
-    pdf = pd.read_sql(sql="SELECT * FROM predictions WHERE `vid` IS NOT NULL AND `vid` != ''", con=conn, parse_dates=['tmstmp', 'prdtm'])
+    pdf = pd.read_sql(sql="SELECT * FROM predictions WHERE `vid` IS NOT NULL AND `vid` != '' LIMIT 1000", con=conn, parse_dates=['tmstmp', 'prdtm'])
     f = lambda x: len(str(x)) != 0
     pdf['dly'] = pdf['dly'].map(f)
     return vdf, pdf
@@ -34,14 +34,14 @@ def load_data(fname):
 # test
 vdf, pdf = load_data('bus_aug23.db')
 # Inspect the datatypes of the dataframe
-print vdf.dtypes
-print pdf.dtypes
-
-print len(vdf), len(pdf)
-
-# Inspect the first five entries of the dataframe
-print vdf.head()
-print pdf.head()
+# print vdf.dtypes
+# print pdf.dtypes
+#
+# print len(vdf), len(pdf)
+#
+# # Inspect the first five entries of the dataframe
+# print vdf.head()
+# print pdf.head()
 
 
 def split_trips(df):
@@ -70,8 +70,8 @@ def split_trips(df):
     return result
 
 # test
-all_trips = {rt: split_trips(vdf[vdf["rt"] == rt]) for rt in ["61A", "61B", "61C", "61D"]}
-print [(t, len(all_trips[t])) for t in all_trips]
+# all_trips = {rt: split_trips(vdf[vdf["rt"] == rt]) for rt in ["61A", "61B", "61C", "61D"]}
+# print [(t, len(all_trips[t])) for t in all_trips]
 
 
 # Sliding Averages
@@ -156,7 +156,7 @@ def compute_sliding_averages(s, k):
     return df['avg']
 
 # test
-print compute_sliding_averages(pd.Series([1,2,3,4,5]),1)
+# print compute_sliding_averages(pd.Series([1,2,3,4,5]),1)
 
 
 def plot_trip(trips, k):
@@ -174,8 +174,8 @@ def plot_trip(trips, k):
     return plt
 
 # test
-lines = plot_trip(all_trips['61A'][:20], 15)
-plt.show()
+# lines = plot_trip(all_trips['61A'][:20], 15)
+# plt.show()
 
 
 def plot_avg_spd(df, t):
@@ -185,24 +185,11 @@ def plot_avg_spd(df, t):
         t (int): the granularity of each time period (in minutes) for which an average is speed is calculated
     """
     df = df.set_index('tmstmp')
-    gb = df.groupby(df.index.map(lambda tm: (tm.hour, tm.minute - tm.minute % t)))
-
-    x = gb['spd'].mean().tolist()
-    y = [min(g) for g in gb.groups.values()]
-    # keys = gb.groups.keys()
-    # y = []
-    # for k in keys:
-    #     y.append(gb.groups.get(k)[0].to_datetime().time)
-    y.sort()
-    y = [tms.to_datetime().time for tms in y]
-
-    # data = {'tm': y}
-    # y = pd.DataFrame(data)
-    # y = y['tm']
-    print len(x)
-    print len(y)
-    print type(x)
-    print type(y)
+    gb = df.groupby(df.index.map(lambda tm: (tm.hour * 60 + tm.minute) - (tm.hour * 60 + tm.minute) % t))
+    x = gb['spd'].mean()
+    key = gb.groups.keys()
+    key.sort()
+    y = [datetime.time(k / 60, k % 60) for k in key]
     return plt.scatter(y, x)
 
 # test
